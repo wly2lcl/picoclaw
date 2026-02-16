@@ -3,10 +3,11 @@ name: 🐳 Build & Push Docker Image
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Release tag (required, e.g. v0.2.0)"
+      version:
+        description: "Image version tag (e.g. v0.2.0, latest)"
         required: true
         type: string
+        default: "latest"
 
 env:
   GHCR_REGISTRY: ghcr.io
@@ -26,8 +27,6 @@ jobs:
       # ── Checkout ──────────────────────────────
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag }}
 
       # ── Docker Buildx ─────────────────────────
       - name: 🔧 Set up Docker Buildx
@@ -54,11 +53,9 @@ jobs:
         id: tags
         shell: bash
         run: |
-          tag="${{ inputs.tag }}"
-          echo "ghcr_tag=${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:${tag}" >> "$GITHUB_OUTPUT"
-          echo "ghcr_latest=${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:latest" >> "$GITHUB_OUTPUT"
-          echo "aliyun_tag=${{ env.ALIYUN_REGISTRY }}/${{ env.ALIYUN_IMAGE_NAME }}:${tag}" >> "$GITHUB_OUTPUT"
-          echo "aliyun_latest=${{ env.ALIYUN_REGISTRY }}/${{ env.ALIYUN_IMAGE_NAME }}:latest" >> "$GITHUB_OUTPUT"
+          version="${{ inputs.version }}"
+          echo "ghcr_tag=${{ env.GHCR_REGISTRY }}/${{ env.GHCR_IMAGE_NAME }}:${version}" >> "$GITHUB_OUTPUT"
+          echo "aliyun_tag=${{ env.ALIYUN_REGISTRY }}/${{ env.ALIYUN_IMAGE_NAME }}:${version}" >> "$GITHUB_OUTPUT"
 
       # ── Build & Push ──────────────────────────
       - name: 🚀 Build and push Docker image
@@ -68,9 +65,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.tags.outputs.ghcr_tag }}
-            ${{ steps.tags.outputs.ghcr_latest }}
             ${{ steps.tags.outputs.aliyun_tag }}
-            ${{ steps.tags.outputs.aliyun_latest }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/riscv64
