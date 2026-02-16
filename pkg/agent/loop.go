@@ -79,6 +79,9 @@ func createToolRegistry(workspace string, restrict bool, cfg *config.Config, msg
 		BraveEnabled:         cfg.Tools.Web.Brave.Enabled,
 		DuckDuckGoMaxResults: cfg.Tools.Web.DuckDuckGo.MaxResults,
 		DuckDuckGoEnabled:    cfg.Tools.Web.DuckDuckGo.Enabled,
+		TavilyAPIKey:         cfg.Tools.Web.Tavily.APIKey,
+		TavilyMaxResults:     cfg.Tools.Web.Tavily.MaxResults,
+		TavilyEnabled:        cfg.Tools.Web.Tavily.Enabled,
 	}); searchTool != nil {
 		registry.Register(searchTool)
 	}

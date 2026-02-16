@@ -206,9 +206,16 @@ type DuckDuckGoConfig struct {
 	MaxResults int  `json:"max_results" env:"PICOCLAW_TOOLS_WEB_DUCKDUCKGO_MAX_RESULTS"`
 }
 
+type TavilyConfig struct {
+	Enabled    bool   `json:"enabled" env:"PICOCLAW_TOOLS_WEB_TAVILY_ENABLED"`
+	APIKey     string `json:"api_key" env:"PICOCLAW_TOOLS_WEB_TAVILY_API_KEY"`
+	MaxResults int    `json:"max_results" env:"PICOCLAW_TOOLS_WEB_TAVILY_MAX_RESULTS"`
+}
+
 type WebToolsConfig struct {
 	Brave      BraveConfig      `json:"brave"`
 	DuckDuckGo DuckDuckGoConfig `json:"duckduckgo"`
+	Tavily     TavilyConfig     `json:"tavily"`
 }
 
 type ToolsConfig struct {
@@ -319,6 +326,11 @@ func DefaultConfig() *Config {
 				},
 				DuckDuckGo: DuckDuckGoConfig{
 					Enabled:    true,
+					MaxResults: 5,
+				},
+				Tavily: TavilyConfig{
+					Enabled:    false,
+					APIKey:     "",
 					MaxResults: 5,
 				},
 			},
