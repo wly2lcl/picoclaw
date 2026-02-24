@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -85,29 +86,38 @@ func (p *BraveSearchProvider) Search(ctx context.Context, query string, count in
 }
 
 type TavilySearchProvider struct {
-	apiKey string
+	apiKey  string
+	baseURL string
 }
 
 func (p *TavilySearchProvider) Search(ctx context.Context, query string, count int) (string, error) {
-	searchURL := "https://api.tavily.com/search"
-
-	payload := map[string]interface{}{
-		"query":       query,
-		"max_results": count,
+	searchURL := p.baseURL
+	if searchURL == "" {
+		searchURL = "https://api.tavily.com/search"
 	}
 
-	jsonPayload, err := json.Marshal(payload)
+	payload := map[string]any{
+		"api_key":             p.apiKey,
+		"query":               query,
+		"search_depth":        "advanced",
+		"include_answer":      false,
+		"include_images":      false,
+		"include_raw_content": false,
+		"max_results":         count,
+	}
+
+	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", searchURL, strings.NewReader(string(jsonPayload)))
+	req, err := http.NewRequestWithContext(ctx, "POST", searchURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	req.Header.Set("User-Agent", userAgent)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -121,6 +131,10 @@ func (p *TavilySearchProvider) Search(ctx context.Context, query string, count i
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("tavily api error (status %d): %s", resp.StatusCode, string(body))
+	}
+
 	var searchResp struct {
 		Results []struct {
 			Title   string `json:"title"`
@@ -130,7 +144,6 @@ func (p *TavilySearchProvider) Search(ctx context.Context, query string, count i
 	}
 
 	if err := json.Unmarshal(body, &searchResp); err != nil {
-		fmt.Printf("Tavily API Error Body: %s\n", string(body))
 		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
@@ -140,7 +153,7 @@ func (p *TavilySearchProvider) Search(ctx context.Context, query string, count i
 	}
 
 	var lines []string
-	lines = append(lines, fmt.Sprintf("Results for: %s", query))
+	lines = append(lines, fmt.Sprintf("Results for: %s (via Tavily)", query))
 	for i, item := range results {
 		if i >= count {
 			break
@@ -326,11 +339,12 @@ type WebSearchToolOptions struct {
 	BraveAPIKey          string
 	BraveMaxResults      int
 	BraveEnabled         bool
-	DuckDuckGoMaxResults int
-	DuckDuckGoEnabled    bool
 	TavilyAPIKey         string
+	TavilyBaseURL        string
 	TavilyMaxResults     int
 	TavilyEnabled        bool
+	DuckDuckGoMaxResults int
+	DuckDuckGoEnabled    bool
 	PerplexityAPIKey     string
 	PerplexityMaxResults int
 	PerplexityEnabled    bool
@@ -352,7 +366,10 @@ func NewWebSearchTool(opts WebSearchToolOptions) *WebSearchTool {
 			maxResults = opts.BraveMaxResults
 		}
 	} else if opts.TavilyEnabled && opts.TavilyAPIKey != "" {
-		provider = &TavilySearchProvider{apiKey: opts.TavilyAPIKey}
+		provider = &TavilySearchProvider{
+			apiKey:  opts.TavilyAPIKey,
+			baseURL: opts.TavilyBaseURL,
+		}
 		if opts.TavilyMaxResults > 0 {
 			maxResults = opts.TavilyMaxResults
 		}
