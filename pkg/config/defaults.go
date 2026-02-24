@@ -289,6 +289,7 @@ func DefaultConfig() *Config {
 				Tavily: TavilyConfig{
 					Enabled:    false,
 					APIKey:     "",
+					BaseURL:    "",
 					MaxResults: 5,
 				},
 				Perplexity: PerplexityConfig{
